@@ -68,6 +68,62 @@ router.post('/createscreen', adminTokenHandler, async (req, res, next) => {
         next(err); // Pass any errors to the error handling middleware
     }
 })
+
+router.post('/updatescreen/:screenid', adminTokenHandler, async (req, res, next) => {
+    try {
+        const { name, rows, screenType } = req.body;
+        const newScreen = new Screen({
+            name,
+            rows,
+            screenType,
+            movieSchedules: []
+        });
+
+        await newScreen.save();
+
+
+        res.status(201).json({
+            ok: true,
+            message: "Screen added successfully"
+        });
+    }
+    catch (err) {
+        console.log(err);
+        next(err); // Pass any errors to the error handling middleware
+    }
+})
+
+router.put('/updatescreen/:screenid', adminTokenHandler, async (req, res, next) => {
+    try {
+        const screenId = req.params.screenid;
+        const { name, rows, screenType } = req.body;
+
+        // Tìm màn hình cần cập nhật trong cơ sở dữ liệu
+        const screenToUpdate = await Screen.findById(screenId);
+
+        if (!screenToUpdate) {
+            return res.status(404).json({ message: 'Screen not found' });
+        }
+
+        // Cập nhật thông tin mới
+        screenToUpdate.name = name;
+        screenToUpdate.rows = rows;
+        screenToUpdate.screenType = screenType;
+
+        // Lưu thông tin đã cập nhật vào cơ sở dữ liệu
+        await screenToUpdate.save();
+
+        res.status(200).json({
+            ok: true,
+            message: 'Screen updated successfully',
+            updatedScreen: screenToUpdate // Gửi thông tin màn hình đã được cập nhật trở lại
+        });
+    } catch (err) {
+        console.error(err);
+        next(err); // Pass any errors to the error handling middleware
+    }
+});
+
 router.post('/addmoviescheduletoscreen', adminTokenHandler, async (req, res, next) => {
     console.log("Inside addmoviescheduletoscreen")
     try {
@@ -313,6 +369,19 @@ router.get('/getscreens/', async (req, res, next) => {
         next(err); // Pass any errors to the error handling middleware
     }
 });
+
+router.get('/getscreenbyid/:screenId', async (req, res) => {
+    try {
+        const screen = await Screen.findById(req.params.screenId);
+        if (!screen) {
+            return res.status(404).json({ message: 'Screen not found' });
+        }
+        res.status(200).json(createResponse(true, 'Screen retrieved successfully', screen));
+    } catch (error) {
+        console.error(error);
+    }
+});
+
 router.get('/screensbymovieschedule/undefined/:date/:movieid', async (req, res, next) => {
     try {
         const date = req.params.date;
@@ -437,6 +506,23 @@ router.delete('/deleteschedule/:scheduleId', async (req, res) => {
     }
 });
 
+
+
+router.delete('/deletescreen/:screenid', async (req, res) => {
+    const { screenid } = req.params;
+
+    try {
+        const deletedScreen = await Screen.findByIdAndDelete(screenid);
+        if (!deletedScreen) {
+            return res.status(404).json({ message: "Phòng chiếu không tồn tại." });
+        }
+        res.status(200).json({ message: "Xóa phòng chiếu thành công." });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi xảy ra khi xóa phòng chiếu." });
+    }
+
+});
+
 router.get('/getuserbookings', authTokenHandler, async (req, res, next) => {
     try {
         const user = await User.findById(req.userId).populate('bookings');
@@ -492,6 +578,7 @@ router.post('/createpromotion', adminTokenHandler, async (req, res, next) => {
         next(err); // Chuyển các lỗi tới middleware xử lý lỗi
     }
 });
+
 router.get('/getpromotions', async (req, res, next) => {
     try {
         const promotions = await Promotion.find();
@@ -505,6 +592,30 @@ router.get('/getpromotions', async (req, res, next) => {
         next(err); // Pass any errors to the error handling middleware
     }
 });
+
+router.delete('/deletepromotion/:promotionId', adminTokenHandler, async (req, res, next) => {
+    try {
+        const promotionId = req.params.promotionId;
+
+        // Tìm và xóa khuyến mãi dựa trên ID
+        const deletedPromotion = await Promotion.findByIdAndDelete(promotionId);
+
+        if (!deletedPromotion) {
+            return res.status(404).json({
+                ok: false,
+                message: "Promotion not found"
+            });
+        }
+
+        res.status(200).json({
+            ok: true,
+            message: "Promotion deleted successfully"
+        });
+    } catch (err) {
+        next(err); // Chuyển mọi lỗi đến middleware xử lý lỗi
+    }
+});
+
 
 
 

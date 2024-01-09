@@ -26,6 +26,8 @@ router.post('/save', async (req, res) => {
     }
 });
 
+
+
 router.get('/getbanners', async (req, res) => {
     try {
         const banners = await Banner.find(); // Lấy tất cả các banners từ cơ sở dữ liệu
@@ -33,6 +35,29 @@ router.get('/getbanners', async (req, res) => {
         res.status(200).json({ banners }); // Trả về danh sách banners nếu thành công
     } catch (error) {
         res.status(500).json({ message: error.message }); // Trả về thông báo lỗi nếu có lỗi xảy ra
+    }
+});
+
+router.delete('/banners/:id', async (req, res) => {
+    try {
+        const bannerId = req.params.id;
+
+        // Validate bannerId
+        if (!bannerId) {
+            return res.status(400).json({ error: 'Invalid banner ID' });
+        }
+
+        // Use Mongoose's findByIdAndDelete to remove the banner
+        const deletedBanner = await Banner.findByIdAndDelete(bannerId);
+
+        if (!deletedBanner) {
+            return res.status(404).json({ error: 'Banner not found' });
+        }
+
+        res.status(200).json({ message: 'Banner deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

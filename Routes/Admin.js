@@ -65,7 +65,7 @@ router.post('/login', async (req, res, next) => {
         }
 
         // Generate an authentication token for the admin
-        const adminAuthToken = jwt.sign({ adminId: admin._id }, process.env.JWT_ADMIN_SECRET_KEY, { expiresIn: '10m' });
+        const adminAuthToken = jwt.sign({ adminId: admin._id }, process.env.JWT_ADMIN_SECRET_KEY, { expiresIn: '60m' });
 
         res.cookie('adminAuthToken', adminAuthToken, { httpOnly: true });
         res.status(200).json(createResponse(true, 'Admin login successful', { adminAuthToken }));
@@ -92,13 +92,13 @@ router.get('/logout', async (req, res) => {
     })
 })
 
-router.get('/getuserbyemail/:email', async (req, res, next) => {
+router.get('/getuserbyname/:name', async (req, res, next) => {
     try {
-        const userEmail = req.params.email;
+        const username = req.params.name;
 
-        const user = await User.findOne({ email: userEmail });
+        const user = await User.find({ name: { $regex: new RegExp(username) } });
 
-        if (!user) {
+        if (user.length === 0) {
             return res.status(404).json({
                 ok: false,
                 message: 'User not found',
@@ -114,6 +114,30 @@ router.get('/getuserbyemail/:email', async (req, res, next) => {
         next(error); // Chuyển mọi lỗi đến middleware xử lý lỗi
     }
 });
+
+router.get('/getuserbyemail/:email', async (req, res, next) => {
+    try {
+        const userEmail = req.params.email;
+
+        const user = await User.find({ email: { $regex: new RegExp(userEmail, 'i') } });
+
+        if (user.length === 0) {
+            return res.status(404).json({
+                ok: false,
+                message: 'User not found',
+            });
+        }
+
+        res.status(200).json({
+            ok: true,
+            message: 'User found successfully',
+            data: user,
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
 
 router.get('/getuserbyid/:userid', async (req, res, next) => {
     try {
@@ -143,7 +167,6 @@ router.post('/updateuserbyid/:userid', adminTokenHandler, async (req, res, next)
         const { name, email, password, phonenumber, dob, gender } = req.body;
         const updatedFields = {};
         const userid = req.params.userid
-
         if (name) {
             updatedFields.name = name;
         }
